@@ -1,0 +1,45 @@
+---
+roles:
+  pe-puppet-master:
+    private_networks:
+      - {ip: '0.0.0.0', auto_network: true}
+    provider:
+      type: virtualbox
+      customize:
+        - [modifyvm, !ruby/sym id, '--memory', 1024]
+    synced_folders:
+      - {host_path: modules, guest_path: /modules}
+      - {host_path: manifests, guest_path: /manifests}
+      - {host_path: hiera, guest_path: /var/lib/hiera}
+      - {host_path: files, guest_path: /files}
+      - {host_path: masterconfigfiles, guest_path: /var/tmp/masterconfigfiles}
+    provisioners:
+      - {type: hosts}
+      - {type: pe_bootstrap, role: !ruby/sym master, relocate_manifests: !ruby/sym true}
+      - {type: shell, inline: 'sed -i "s/.*modulepath.*/    modulepath=\/modules:\/opt\/puppet\/share\/puppet\/modules/" /etc/puppetlabs/puppet/puppet.conf'}
+      - {type: shell, inline: 'sed -i "s/.*node_terminus.*//" /etc/puppetlabs/puppet/puppet.conf'}
+      - {type: shell, inline: 'sed -i "s/.*host.*/    host = master/" /etc/puppetlabs/puppetdb/conf.d/jetty.ini'}
+      - {type: shell, inline: '/bin/cp -rp /var/tmp/masterconfigfiles/fileserver.conf /etc/puppetlabs/puppet/fileserver.conf;chown 655 /etc/puppetlabs/puppet/fileserver.conf'}
+      - {type: shell, inline: 'service pe-httpd restart;service pe-puppetdb restart'}
+
+
+  pe-puppet-agent:
+    private_networks:
+      - {ip: '0.0.0.0', auto_network: true}
+    provisioners:
+      - {type: hosts}
+      - {type: pe_bootstrap}
+      - {type: shell, inline: '/bin/ln -fs /opt/puppet/bin/puppet /usr/bin'}
+      - {type: puppet_server,puppet_server: master, options: ["-t"]}
+  
+  large-memory:
+    provider:
+      type: virtualbox
+      customize:
+        - [modifyvm, !ruby/sym id, '--memory', 1024]
+
+  small-memory:
+    provider:
+      type: virtualbox
+      customize:
+        - [modifyvm, !ruby/sym id, '--memory', 512]
