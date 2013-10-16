@@ -1,8 +1,8 @@
 .DS*
 .tmp/
-modules/*
-files/*
-hiera/*
+modules/*/*
+files/*/*
+hiera/*/*
 *.lock
 .vagrant
 .pe_build
